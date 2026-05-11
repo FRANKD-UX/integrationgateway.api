@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Stable Swashbuckle + OpenApi 1.x pairing — fully compatible with net8.0 -->
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+		<PackageReference Include="Microsoft.OpenApi" Version="1.6.22" />
+
+		<!-- Polly — pinned to net8.0 compatible version -->
+		<PackageReference Include="Polly" Version="8.6.6" />
+		<PackageReference Include="Microsoft.Extensions.Http.Polly" Version="8.0.0" />
+
+		<!-- Microsoft Graph + Identity -->
+		<PackageReference Include="Microsoft.Graph" Version="5.104.0" />
+		<PackageReference Include="Microsoft.Identity.Client" Version="4.83.3" />
+	</ItemGroup>
+
+</Project>
