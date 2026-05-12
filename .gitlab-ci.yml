@@ -48,7 +48,7 @@ publish:
   stage: publish
   script:
     - dotnet restore "$PROJECT_FILE"
-    - dotnet publish "$PROJECT_FILE" -c Release -o "$PUBLISH_DIR" --no-build
+    - dotnet publish "$PROJECT_FILE" -c Release -o "$PUBLISH_DIR"
   artifacts:
     name: "$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA"
     expire_in: 2 weeks
