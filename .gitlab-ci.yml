@@ -66,6 +66,9 @@ deploy-staging:
     - echo "Deployment package copied"
     - ls -la deployment-staging/
 
+  environment:
+    name: staging
+
   artifacts:
     name: "staging-deployment-$CI_COMMIT_SHORT_SHA"
     expire_in: 1 week
