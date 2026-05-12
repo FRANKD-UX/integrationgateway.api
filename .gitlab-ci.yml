@@ -55,3 +55,19 @@ publish:
     expire_in: 2 weeks
     paths:
       - publish/
+
+deploy-staging:
+  stage: deploy
+
+  script:
+    - echo "Starting staging deployment"
+    - mkdir -p deployment-staging
+    - cp -r publish/* deployment-staging/
+    - echo "Deployment package copied"
+    - ls -la deployment-staging/
+
+  artifacts:
+    name: "staging-deployment-$CI_COMMIT_SHORT_SHA"
+    expire_in: 1 week
+    paths:
+      - deployment-staging/
