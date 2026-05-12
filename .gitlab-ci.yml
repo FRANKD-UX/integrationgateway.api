@@ -60,11 +60,11 @@ deploy-staging:
   stage: deploy
 
   script:
-    - echo "Starting staging deployment"
-    - mkdir -p deployment-staging
-    - cp -r publish/* deployment-staging/
-    - echo "Deployment package copied"
-    - ls -la deployment-staging/
+  - echo "Starting staging deployment"
+  - mkdir -p "$DEPLOY_PATH"
+  - cp -r publish/* "$DEPLOY_PATH"/
+  - echo "Deployment package copied"
+  - ls -la "$DEPLOY_PATH"/
 
   environment:
     name: staging
