@@ -1,17 +1,49 @@
 stages:
-  - validate
+  - restore
+  - build
+  - test
+  - publish
 
-validate-runner:
-  stage: validate
-  image: alpine:latest
-
-  script:
-    - echo "GitLab CI is operational"
-    - echo "Runner is working"
-    - echo "Container execution successful"
-    - uname -a
-    - pwd
-    - ls -la
-
+default:
+  image: mcr.microsoft.com/dotnet/sdk:8.0
   tags:
     - docker
+  cache:
+    key: nuget
+    paths:
+      - .nuget/packages/
+
+variables:
+  NUGET_PACKAGES: "$CI_PROJECT_DIR/.nuget/packages"
+  PROJECT_FILE: "IntegrationGateway.Api.csproj"
+
+before_script:
+  - dotnet --info
+
+restore:
+  stage: restore
+  script:
+    - dotnet restore "$PROJECT_FILE"
+
+build:
+  stage: build
+  script:
+    - dotnet build "$PROJECT_FILE" -c Release --no-restore
+
+test:
+  stage: test
+  script:
+    - dotnet test "$PROJECT_FILE" -c Release --no-build --logger "trx;LogFileName=test-results.trx"
+  artifacts:
+    when: always
+    paths:
+      - "**/TestResults/"
+      - "**/test-results.trx"
+
+publish:
+  stage: publish
+  script:
+    - dotnet publish "$PROJECT_FILE" -c Release -o publish --no-build
+  artifacts:
+    paths:
+      - publish/
