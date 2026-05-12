@@ -1,5 +1,4 @@
 stages:
-  - restore
   - build
   - test
   - publish
@@ -20,20 +19,15 @@ variables:
 before_script:
   - dotnet --info
 
-restore:
-  stage: restore
-  script:
-    - dotnet restore "$PROJECT_FILE"
-
 build:
   stage: build
   script:
-    - dotnet build "$PROJECT_FILE" -c Release --no-restore
+    - dotnet build "$PROJECT_FILE" -c Release
 
 test:
   stage: test
   script:
-    - dotnet test "$PROJECT_FILE" -c Release --no-build --logger "trx;LogFileName=test-results.trx"
+    - dotnet test "$PROJECT_FILE" -c Release --logger "trx;LogFileName=test-results.trx"
   artifacts:
     when: always
     paths:
@@ -43,7 +37,7 @@ test:
 publish:
   stage: publish
   script:
-    - dotnet publish "$PROJECT_FILE" -c Release -o publish --no-build
+    - dotnet publish "$PROJECT_FILE" -c Release -o publish
   artifacts:
     paths:
       - publish/
