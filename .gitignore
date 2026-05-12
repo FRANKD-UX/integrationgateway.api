@@ -1,0 +1,34 @@
+# Build folders
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Rider
+.idea/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+
+# Test results
+TestResults/
+
+# Publish output
+publish/
+
+# NuGet
+*.nupkg
+
+# Secrets
+appsettings.Production.json
+secrets.json
