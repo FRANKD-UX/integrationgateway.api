@@ -1,0 +1,17 @@
+stages:
+  - validate
+
+validate-runner:
+  stage: validate
+  image: alpine:latest
+
+  script:
+    - echo "GitLab CI is operational"
+    - echo "Runner is working"
+    - echo "Container execution successful"
+    - uname -a
+    - pwd
+    - ls -la
+
+  tags:
+    - docker
