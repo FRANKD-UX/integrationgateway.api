@@ -15,6 +15,7 @@ default:
 variables:
   NUGET_PACKAGES: "$CI_PROJECT_DIR/.nuget/packages"
   PROJECT_FILE: "IntegrationGateway.Api.csproj"
+  PUBLISH_DIR: "publish"
 
 before_script:
   - dotnet --info
@@ -22,14 +23,23 @@ before_script:
 build:
   stage: build
   script:
-    - dotnet build "$PROJECT_FILE" -c Release
+    - dotnet restore "$PROJECT_FILE"
+    - dotnet build "$PROJECT_FILE" -c Release --no-restore
+  artifacts:
+    name: "$CI_PROJECT_NAME-build-$CI_COMMIT_SHORT_SHA"
+    expire_in: 1 week
+    paths:
+      - bin/Release/
 
 test:
   stage: test
   script:
-    - dotnet test "$PROJECT_FILE" -c Release --logger "trx;LogFileName=test-results.trx"
+    - dotnet restore "$PROJECT_FILE"
+    - dotnet test "$PROJECT_FILE" -c Release --no-build --logger "trx;LogFileName=test-results.trx"
   artifacts:
     when: always
+    name: "$CI_PROJECT_NAME-tests-$CI_COMMIT_SHORT_SHA"
+    expire_in: 1 week
     paths:
       - "**/TestResults/"
       - "**/test-results.trx"
@@ -37,7 +47,10 @@ test:
 publish:
   stage: publish
   script:
-    - dotnet publish "$PROJECT_FILE" -c Release -o publish
+    - dotnet restore "$PROJECT_FILE"
+    - dotnet publish "$PROJECT_FILE" -c Release -o "$PUBLISH_DIR" --no-build
   artifacts:
+    name: "$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA"
+    expire_in: 2 weeks
     paths:
       - publish/
