@@ -6,10 +6,8 @@ stages:
 
 default:
   image: mcr.microsoft.com/dotnet/sdk:8.0
-
   tags:
     - docker
-
   cache:
     key: nuget
     paths:
@@ -25,63 +23,49 @@ before_script:
 
 build:
   stage: build
-
   script:
     - dotnet restore "$PROJECT_FILE"
     - dotnet build "$PROJECT_FILE" -c Release --no-restore
-
   artifacts:
     name: "$CI_PROJECT_NAME-build-$CI_COMMIT_SHORT_SHA"
     expire_in: 1 week
-
     paths:
       - bin/Release/
 
 test:
   stage: test
-
   script:
     - dotnet restore "$PROJECT_FILE"
     - dotnet test "$PROJECT_FILE" -c Release --no-build --logger "trx;LogFileName=test-results.trx"
-
   artifacts:
     when: always
     name: "$CI_PROJECT_NAME-tests-$CI_COMMIT_SHORT_SHA"
     expire_in: 1 week
-
     paths:
       - "**/TestResults/"
       - "**/test-results.trx"
 
 publish:
   stage: publish
-
   script:
     - dotnet restore "$PROJECT_FILE"
-    - dotnet publish "$PROJECT_FILE" -c Release -o "$PUBLISH_DIR" --no-build
-
+    - dotnet publish "$PROJECT_FILE" -c Release -o "$PUBLISH_DIR"
   artifacts:
     name: "$CI_PROJECT_NAME-publish-$CI_COMMIT_SHORT_SHA"
     expire_in: 2 weeks
-
     paths:
       - publish/
 
 deploy-iis:
   stage: deploy
-
   script:
     - echo "Starting IIS deployment handoff"
-    - echo "Deploy path: $DEPLOY_PATH"
-
+    - echo "Deploy path is $DEPLOY_PATH"
     - rm -rf "$DEPLOY_PATH"/*
     - cp -r publish/* "$DEPLOY_PATH"/
-
     - echo "Deployment files copied successfully"
     - ls -la "$DEPLOY_PATH"
-
   dependencies:
     - publish
-
   environment:
     name: staging
