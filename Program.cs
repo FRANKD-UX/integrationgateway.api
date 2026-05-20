@@ -1,8 +1,9 @@
-// Program.cs
 using IntegrationGateway.Api.Middleware;
 using IntegrationGateway.Api.Services;
 using Polly;
 using Polly.Extensions.Http;
+using IntegrationGateway.Api.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,21 @@ builder.Services.AddScoped<GraphAuthService>();
 builder.Services.AddHttpClient<SharePointService>()
     .AddPolicyHandler(GetRetryPolicy());
 
+// Database - SQL Server via EF Core
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null
+            );
+        }
+    )
+);
+
 // Logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -31,7 +47,7 @@ app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
-// ✅ API key middleware — must be before UseAuthorization and MapControllers
+// API key middleware - must be before UseAuthorization and MapControllers
 app.UseMiddleware<ApiKeyMiddleware>();
 
 app.UseAuthorization();

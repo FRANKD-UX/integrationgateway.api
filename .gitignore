@@ -32,3 +32,8 @@ publish/
 # Secrets
 appsettings.Production.json
 secrets.json
+
+# Local settings containing secrets - never commit
+appsettings.json
+appsettings.Development.json
+Add-Content .gitignore "`nappsettings.json`nappsettings.Development.json"
