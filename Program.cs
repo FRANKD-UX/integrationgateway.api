@@ -1,9 +1,11 @@
+using IntegrationGateway.Api.Infrastructure.Data;
 using IntegrationGateway.Api.Middleware;
+using IntegrationGateway.Api.Modules.WorkItems;
 using IntegrationGateway.Api.Services;
+using Microsoft.EntityFrameworkCore;
 using Polly;
 using Polly.Extensions.Http;
-using IntegrationGateway.Api.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +17,11 @@ builder.Services.AddSwaggerGen();
 
 // Register services
 builder.Services.AddScoped<GraphAuthService>();
+
+// WorkItems module
+builder.Services.AddScoped<WorkItemRepository>();
+builder.Services.AddScoped<WorkItemService>();
+
 
 // HttpClient for SharePointService with Polly retry policy
 builder.Services.AddHttpClient<SharePointService>()
