@@ -17,6 +17,14 @@ public partial class Department
 
     public DateTime UpdatedAt { get; set; }
 
+    public virtual ICollection<IncidentChainStep> IncidentChainSteps { get; set; } = new List<IncidentChainStep>();
+
+    public virtual ICollection<Incident> IncidentCurrentDepartments { get; set; } = new List<Incident>();
+
+    public virtual ICollection<Incident> IncidentOriginDepartments { get; set; } = new List<Incident>();
+
+    public virtual ICollection<IncidentTypeChainStep> IncidentTypeChainSteps { get; set; } = new List<IncidentTypeChainStep>();
+
     public virtual ICollection<IncidentType> IncidentTypes { get; set; } = new List<IncidentType>();
 
     public virtual Project Project { get; set; } = null!;

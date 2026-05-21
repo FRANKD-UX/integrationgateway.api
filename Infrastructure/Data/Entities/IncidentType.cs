@@ -23,6 +23,12 @@ public partial class IncidentType
 
     public virtual Department Department { get; set; } = null!;
 
+    public virtual ICollection<IncidentTypeChainStep> IncidentTypeChainSteps { get; set; } = new List<IncidentTypeChainStep>();
+
+    public virtual ICollection<IncidentTypeChecklistItem> IncidentTypeChecklistItems { get; set; } = new List<IncidentTypeChecklistItem>();
+
+    public virtual ICollection<Incident> Incidents { get; set; } = new List<Incident>();
+
     public virtual Project Project { get; set; } = null!;
 
     public virtual ICollection<WorkItem> WorkItems { get; set; } = new List<WorkItem>();

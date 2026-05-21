@@ -23,6 +23,8 @@ public partial class Project
 
     public virtual ICollection<IncidentType> IncidentTypes { get; set; } = new List<IncidentType>();
 
+    public virtual ICollection<Incident> Incidents { get; set; } = new List<Incident>();
+
     public virtual ICollection<ProjectUser> ProjectUsers { get; set; } = new List<ProjectUser>();
 
     public virtual ICollection<Site> Sites { get; set; } = new List<Site>();

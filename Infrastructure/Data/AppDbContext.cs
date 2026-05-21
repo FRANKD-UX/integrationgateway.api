@@ -14,9 +14,25 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Department> Departments { get; set; }
 
+    public virtual DbSet<Incident> Incidents { get; set; }
+
+    public virtual DbSet<IncidentAttachment> IncidentAttachments { get; set; }
+
+    public virtual DbSet<IncidentAuditLog> IncidentAuditLogs { get; set; }
+
+    public virtual DbSet<IncidentChainChecklist> IncidentChainChecklists { get; set; }
+
+    public virtual DbSet<IncidentChainStep> IncidentChainSteps { get; set; }
+
+    public virtual DbSet<IncidentEscalation> IncidentEscalations { get; set; }
+
     public virtual DbSet<IncidentLog> IncidentLogs { get; set; }
 
     public virtual DbSet<IncidentType> IncidentTypes { get; set; }
+
+    public virtual DbSet<IncidentTypeChainStep> IncidentTypeChainSteps { get; set; }
+
+    public virtual DbSet<IncidentTypeChecklistItem> IncidentTypeChecklistItems { get; set; }
 
     public virtual DbSet<Project> Projects { get; set; }
 
@@ -57,6 +73,167 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Departments_Projects");
+        });
+
+        modelBuilder.Entity<Incident>(entity =>
+        {
+            entity.HasIndex(e => new { e.CurrentDepartmentId, e.Status }, "IX_Incidents_CurrentDepartment").HasFilter("([IsDeleted]=(0))");
+
+            entity.HasIndex(e => new { e.OriginDepartmentId, e.Status }, "IX_Incidents_OriginDepartment").HasFilter("([IsDeleted]=(0))");
+
+            entity.Property(e => e.ClosedAt).HasPrecision(0);
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.CurrentChainStepOrder).HasDefaultValue(1);
+            entity.Property(e => e.Priority).HasMaxLength(10);
+            entity.Property(e => e.Status)
+                .HasMaxLength(50)
+                .HasDefaultValue("Logged");
+            entity.Property(e => e.Title).HasMaxLength(300);
+            entity.Property(e => e.TotalChainSteps).HasDefaultValue(1);
+            entity.Property(e => e.UpdatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.HasOne(d => d.CurrentDepartment).WithMany(p => p.IncidentCurrentDepartments)
+                .HasForeignKey(d => d.CurrentDepartmentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Incidents_CurrentDepartment");
+
+            entity.HasOne(d => d.IncidentType).WithMany(p => p.Incidents)
+                .HasForeignKey(d => d.IncidentTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Incidents_IncidentTypes");
+
+            entity.HasOne(d => d.OriginDepartment).WithMany(p => p.IncidentOriginDepartments)
+                .HasForeignKey(d => d.OriginDepartmentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Incidents_OriginDepartment");
+
+            entity.HasOne(d => d.Project).WithMany(p => p.Incidents)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Incidents_Projects");
+        });
+
+        modelBuilder.Entity<IncidentAttachment>(entity =>
+        {
+            entity.HasKey(e => e.AttachmentId);
+
+            entity.Property(e => e.AttachmentType).HasMaxLength(50);
+            entity.Property(e => e.ContentType).HasMaxLength(100);
+            entity.Property(e => e.FileName).HasMaxLength(300);
+            entity.Property(e => e.FilePath).HasMaxLength(1000);
+            entity.Property(e => e.UploadedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.HasOne(d => d.Incident).WithMany(p => p.IncidentAttachments)
+                .HasForeignKey(d => d.IncidentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentAttachments_Incidents");
+
+            entity.HasOne(d => d.Step).WithMany(p => p.IncidentAttachments)
+                .HasForeignKey(d => d.StepId)
+                .HasConstraintName("FK_IncidentAttachments_Steps");
+        });
+
+        modelBuilder.Entity<IncidentAuditLog>(entity =>
+        {
+            entity.HasKey(e => e.AuditId);
+
+            entity.ToTable("IncidentAuditLog");
+
+            entity.Property(e => e.Action).HasMaxLength(100);
+            entity.Property(e => e.FromStatus).HasMaxLength(50);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.PerformedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.ToStatus).HasMaxLength(50);
+
+            entity.HasOne(d => d.Incident).WithMany(p => p.IncidentAuditLogs)
+                .HasForeignKey(d => d.IncidentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentAuditLog_Incidents");
+        });
+
+        modelBuilder.Entity<IncidentChainChecklist>(entity =>
+        {
+            entity.HasKey(e => e.ChecklistId);
+
+            entity.HasIndex(e => new { e.StepId, e.IsCompleted }, "IX_IncidentChainChecklists_Step");
+
+            entity.Property(e => e.CompletedAt).HasPrecision(0);
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.IsRequired).HasDefaultValue(true);
+            entity.Property(e => e.ItemText).HasMaxLength(500);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+
+            entity.HasOne(d => d.Incident).WithMany(p => p.IncidentChainChecklists)
+                .HasForeignKey(d => d.IncidentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentChainChecklists_Incidents");
+
+            entity.HasOne(d => d.Step).WithMany(p => p.IncidentChainChecklists)
+                .HasForeignKey(d => d.StepId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentChainChecklists_Steps");
+        });
+
+        modelBuilder.Entity<IncidentChainStep>(entity =>
+        {
+            entity.HasKey(e => e.StepId);
+
+            entity.HasIndex(e => new { e.IncidentId, e.StepOrder }, "IX_IncidentChainSteps_Incident");
+
+            entity.HasIndex(e => new { e.IncidentId, e.StepOrder }, "UX_IncidentChainSteps_Incident_Order").IsUnique();
+
+            entity.Property(e => e.CompletedAt).HasPrecision(0);
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.DueAt).HasPrecision(0);
+            entity.Property(e => e.StartedAt).HasPrecision(0);
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
+
+            entity.HasOne(d => d.Department).WithMany(p => p.IncidentChainSteps)
+                .HasForeignKey(d => d.DepartmentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentChainSteps_Departments");
+
+            entity.HasOne(d => d.Incident).WithMany(p => p.IncidentChainSteps)
+                .HasForeignKey(d => d.IncidentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentChainSteps_Incidents");
+        });
+
+        modelBuilder.Entity<IncidentEscalation>(entity =>
+        {
+            entity.HasKey(e => e.EscalationId);
+
+            entity.HasIndex(e => new { e.StepId, e.EscalatedAt }, "IX_IncidentEscalations_Step");
+
+            entity.Property(e => e.EscalatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.NotificationCount).HasDefaultValue(1);
+            entity.Property(e => e.Reason).HasMaxLength(500);
+
+            entity.HasOne(d => d.Incident).WithMany(p => p.IncidentEscalations)
+                .HasForeignKey(d => d.IncidentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentEscalations_Incidents");
+
+            entity.HasOne(d => d.Step).WithMany(p => p.IncidentEscalations)
+                .HasForeignKey(d => d.StepId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentEscalations_Steps");
         });
 
         modelBuilder.Entity<IncidentLog>(entity =>
@@ -112,6 +289,44 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_IncidentTypes_Projects");
+        });
+
+        modelBuilder.Entity<IncidentTypeChainStep>(entity =>
+        {
+            entity.HasKey(e => e.ChainStepId);
+
+            entity.HasIndex(e => new { e.IncidentTypeId, e.StepOrder }, "UX_IncidentTypeChainSteps_Type_Order").IsUnique();
+
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.SlaMinutes).HasDefaultValue(60);
+
+            entity.HasOne(d => d.Department).WithMany(p => p.IncidentTypeChainSteps)
+                .HasForeignKey(d => d.DepartmentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentTypeChainSteps_Departments");
+
+            entity.HasOne(d => d.IncidentType).WithMany(p => p.IncidentTypeChainSteps)
+                .HasForeignKey(d => d.IncidentTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentTypeChainSteps_IncidentTypes");
+        });
+
+        modelBuilder.Entity<IncidentTypeChecklistItem>(entity =>
+        {
+            entity.HasKey(e => e.ChecklistItemId);
+
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.IsRequired).HasDefaultValue(true);
+            entity.Property(e => e.ItemText).HasMaxLength(500);
+
+            entity.HasOne(d => d.IncidentType).WithMany(p => p.IncidentTypeChecklistItems)
+                .HasForeignKey(d => d.IncidentTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentTypeChecklistItems_IncidentTypes");
         });
 
         modelBuilder.Entity<Project>(entity =>
