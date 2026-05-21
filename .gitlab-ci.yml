@@ -60,38 +60,10 @@ deploy-iis:
   stage: deploy
   script:
     - echo "Starting IIS deployment"
-    - echo "Writing appsettings.json with environment configuration"
-
-    - |
-      cat > publish/appsettings.json << EOF
-      {
-        "ConnectionStrings": {
-          "DefaultConnection": "${DB_CONNECTION_STRING}"
-        },
-        "Logging": {
-          "LogLevel": {
-            "Default": "Information",
-            "Microsoft.AspNetCore": "Warning"
-          }
-        },
-        "AllowedHosts": "*",
-        "Graph": {
-          "TenantId": "${GRAPH_TENANT_ID}",
-          "ClientId": "${GRAPH_CLIENT_ID}",
-          "ClientSecret": "${GRAPH_CLIENT_SECRET}",
-          "SenderEmail": "${SENDER_EMAIL}"
-        },
-        "SharePoint": {
-          "SiteUrl": "${SHAREPOINT_SITE_URL}",
-          "ListId": "${SHAREPOINT_LIST_ID}"
-        },
-        "App": {
-          "BaseUrl": "${APP_BASE_URL}"
-        }
-      }
-      EOF
-
-    - echo "appsettings.json written successfully"
+    - echo "Writing appsettings.json from CI variables"
+    - python3 write_appsettings.py
+    - echo "Verifying appsettings.json"
+    - cat publish/appsettings.json
     - echo "Deploy path is $DEPLOY_PATH"
     - rm -rf "$DEPLOY_PATH"/*
     - cp -r publish/* "$DEPLOY_PATH"/
