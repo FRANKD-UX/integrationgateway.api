@@ -60,6 +60,7 @@ deploy-iis:
   stage: deploy
   script:
     - echo "Starting IIS deployment"
+    - apt-get update -qq && apt-get install -y -qq python3
     - echo "Writing appsettings.json from CI variables"
     - python3 write_appsettings.py
     - echo "Verifying appsettings.json"
