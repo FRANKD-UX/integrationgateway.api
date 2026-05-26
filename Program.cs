@@ -5,6 +5,7 @@ using IntegrationGateway.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Polly;
 using Polly.Extensions.Http;
+using IntegrationGateway.Api.Modules.IncidentWorkflow;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,12 @@ builder.Services.AddScoped<GraphAuthService>();
 // WorkItems module
 builder.Services.AddScoped<WorkItemRepository>();
 builder.Services.AddScoped<WorkItemService>();
+
+// IncidentWorkflow module
+builder.Services.AddScoped<IncidentWorkflowRepository>();
+builder.Services.AddScoped<WorkflowEngine>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<IncidentWorkflowService>();
 
 
 // HttpClient for SharePointService with Polly retry policy
