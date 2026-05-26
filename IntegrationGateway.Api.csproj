@@ -29,4 +29,8 @@
 		<PackageReference Include="Microsoft.Identity.Client" Version="4.83.3" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Modules\Tasks\" />
+	</ItemGroup>
+
 </Project>
