@@ -69,6 +69,31 @@ app.MapControllers();
 
 app.Run();
 
+// Show detailed errors to diagnose 500s
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+
+        var error = context.Features
+            .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+
+        if (error != null)
+        {
+            await context.Response.WriteAsync(
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    message = error.Error.Message,
+                    inner = error.Error.InnerException?.Message,
+                    type = error.Error.GetType().Name
+                })
+            );
+        }
+    });
+});
+
 static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
 {
     return HttpPolicyExtensions
