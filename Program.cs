@@ -16,6 +16,24 @@ builder.Services.AddEndpointsApiExplorer();
 // Swagger / OpenAPI
 builder.Services.AddSwaggerGen();
 
+// CORS — origins are configured in appsettings under App:AllowedOrigins
+var allowedOrigins = builder.Configuration
+    .GetSection("App:AllowedOrigins")
+    .Get<string[]>() ?? [];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendCors", policy =>
+    {
+        if (allowedOrigins.Length > 0)
+            policy.WithOrigins(allowedOrigins);
+        else
+            policy.AllowAnyOrigin();
+
+        policy.AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
 // Register services
 builder.Services.AddScoped<GraphAuthService>();
 
@@ -55,21 +73,7 @@ builder.Logging.AddConsole();
 
 var app = builder.Build();
 
-// Swagger UI
-app.UseSwagger();
-app.UseSwaggerUI();
-
-app.UseHttpsRedirection();
-
-// API key middleware - must be before UseAuthorization and MapControllers
-app.UseMiddleware<ApiKeyMiddleware>();
-
-app.UseAuthorization();
-app.MapControllers();
-
-app.Run();
-
-// Show detailed errors to diagnose 500s
+// Global exception handler — must come before other middleware
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
@@ -93,6 +97,21 @@ app.UseExceptionHandler(errorApp =>
         }
     });
 });
+
+// Swagger UI
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.UseHttpsRedirection();
+app.UseCors("FrontendCors");
+
+// API key middleware - must be before UseAuthorization and MapControllers
+app.UseMiddleware<ApiKeyMiddleware>();
+
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();
 
 static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
 {

@@ -23,7 +23,12 @@ config = {
         "ListId": os.environ.get("SHAREPOINT_LIST_ID", "")
     },
     "App": {
-        "BaseUrl": os.environ.get("APP_BASE_URL", "http://10.200.0.76:8085")
+        "BaseUrl": os.environ.get("APP_BASE_URL", "http://10.200.0.76:8085"),
+        "AllowedOrigins": [
+            o.strip()
+            for o in os.environ.get("ALLOWED_ORIGINS", "").split(",")
+            if o.strip()
+        ]
     }
 }
 

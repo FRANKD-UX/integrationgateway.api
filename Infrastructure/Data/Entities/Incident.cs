@@ -29,6 +29,8 @@ public partial class Incident
 
     public int? ClosedByUserId { get; set; }
 
+    public virtual User? CreatedByUser { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }

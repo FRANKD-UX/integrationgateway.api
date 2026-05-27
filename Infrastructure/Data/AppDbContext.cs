@@ -115,6 +115,11 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Incidents_Projects");
+
+            entity.HasOne(d => d.CreatedByUser).WithMany()
+                .HasForeignKey(d => d.CreatedByUserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Incidents_CreatedByUser");
         });
 
         modelBuilder.Entity<IncidentAttachment>(entity =>

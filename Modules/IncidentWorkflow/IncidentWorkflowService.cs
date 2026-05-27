@@ -248,7 +248,7 @@ public class IncidentWorkflowService
         CurrentChainStepOrder = i.CurrentChainStepOrder,
         TotalChainSteps = i.TotalChainSteps,
         CreatedByUserId = i.CreatedByUserId,
-        CreatedByUserName = null,
+        CreatedByUserName = i.CreatedByUser?.DisplayName,
         CreatedAt = i.CreatedAt,
         UpdatedAt = i.UpdatedAt,
         ClosedAt = i.ClosedAt,
