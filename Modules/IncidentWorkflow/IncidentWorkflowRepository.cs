@@ -25,7 +25,40 @@ public class IncidentWorkflowRepository
                 .ThenInclude(s => s.IncidentChainChecklists)
             .FirstOrDefaultAsync(i => i.IncidentId == incidentId && !i.IsDeleted);
     }
+    public async Task<(List<Incident> Items, int Total)> GetAllAsync(
+    GetIncidentsQuery query)
+    {
+        var q = _context.Incidents
+            .Include(i => i.IncidentType)
+            .Include(i => i.OriginDepartment)
+            .Include(i => i.CurrentDepartment)
+            .Where(i => !i.IsDeleted)
+            .AsQueryable();
 
+        if (query.DepartmentId.HasValue)
+            q = q.Where(i =>
+                i.CurrentDepartmentId == query.DepartmentId.Value ||
+                i.OriginDepartmentId == query.DepartmentId.Value);
+
+        if (query.ProjectId.HasValue)
+            q = q.Where(i => i.ProjectId == query.ProjectId.Value);
+
+        if (!string.IsNullOrWhiteSpace(query.Status))
+            q = q.Where(i => i.Status == query.Status);
+
+        if (!string.IsNullOrWhiteSpace(query.Priority))
+            q = q.Where(i => i.Priority == query.Priority);
+
+        var total = await q.CountAsync();
+
+        var items = await q
+            .OrderByDescending(i => i.CreatedAt)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync();
+
+        return (items, total);
+    }
     public async Task<List<Incident>> GetByDepartmentAsync(
         int departmentId,
         string? status = null)
@@ -135,5 +168,39 @@ public class IncidentWorkflowRepository
                 ur.User.IsActive)
             .Select(ur => ur.User)
             .ToListAsync();
+    }
+    public async Task<(List<Incident> Items, int Total)> GetAllAsync(
+    GetIncidentsQuery query)
+    {
+        var q = _context.Incidents
+            .Include(i => i.IncidentType)
+            .Include(i => i.OriginDepartment)
+            .Include(i => i.CurrentDepartment)
+            .Where(i => !i.IsDeleted)
+            .AsQueryable();
+
+        if (query.DepartmentId.HasValue)
+            q = q.Where(i =>
+                i.CurrentDepartmentId == query.DepartmentId.Value ||
+                i.OriginDepartmentId == query.DepartmentId.Value);
+
+        if (query.ProjectId.HasValue)
+            q = q.Where(i => i.ProjectId == query.ProjectId.Value);
+
+        if (!string.IsNullOrWhiteSpace(query.Status))
+            q = q.Where(i => i.Status == query.Status);
+
+        if (!string.IsNullOrWhiteSpace(query.Priority))
+            q = q.Where(i => i.Priority == query.Priority);
+
+        var total = await q.CountAsync();
+
+        var items = await q
+            .OrderByDescending(i => i.CreatedAt)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync();
+
+        return (items, total);
     }
 }

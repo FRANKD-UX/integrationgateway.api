@@ -139,6 +139,20 @@ public class IncidentWorkflowService
         return incidents.Select(MapToDto);
     }
 
+    public async Task<PagedResult<IncidentDto>> GetAllAsync(
+    GetIncidentsQuery query)
+    {
+        var (items, total) = await _repository.GetAllAsync(query);
+
+        return new PagedResult<IncidentDto>
+        {
+            Items = items.Select(MapToDto).ToList(),
+            Total = total,
+            Page = query.Page,
+            PageSize = query.PageSize
+        };
+    }
+
     public async Task<TransitionResult> CompleteChecklistItemAsync(
         int incidentId,
         int checklistId,

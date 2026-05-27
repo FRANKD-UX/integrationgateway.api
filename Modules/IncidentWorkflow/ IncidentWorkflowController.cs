@@ -1,4 +1,4 @@
-﻿using IntegrationGateway.Api.Modules.IncidentWorkflow.Models;
+using IntegrationGateway.Api.Modules.IncidentWorkflow.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IntegrationGateway.Api.Modules.IncidentWorkflow;
