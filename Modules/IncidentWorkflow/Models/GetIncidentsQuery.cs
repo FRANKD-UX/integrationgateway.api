@@ -1,4 +1,4 @@
-﻿namespace IntegrationGateway.Api.Modules.IncidentWorkflow.Models;
+namespace IntegrationGateway.Api.Modules.IncidentWorkflow.Models;
 
 public class GetIncidentsQuery
 {

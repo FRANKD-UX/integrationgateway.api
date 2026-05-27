@@ -1,4 +1,8 @@
-﻿using IntegrationGateway.Api.Infrastructure.Data.Entities;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using IntegrationGateway.Api.Infrastructure.Data.Entities;
 using IntegrationGateway.Api.Modules.IncidentWorkflow.Models;
 
 namespace IntegrationGateway.Api.Modules.IncidentWorkflow;
@@ -102,8 +106,7 @@ public class IncidentWorkflowService
             created.IncidentId,
             request.OriginDepartmentId,
             "A new incident has been assigned to your department",
-            NotificationType.NewIncident
-        );
+            NotificationType.NewIncident);
 
         await _repository.SaveAuditLogAsync(new IncidentAuditLog
         {
@@ -129,18 +132,7 @@ public class IncidentWorkflowService
         return incident is null ? null : MapToDto(incident);
     }
 
-    public async Task<IEnumerable<IncidentDto>> GetByDepartmentAsync(
-        int departmentId,
-        string? status = null)
-    {
-        var incidents = await _repository
-            .GetByDepartmentAsync(departmentId, status);
-
-        return incidents.Select(MapToDto);
-    }
-
-    public async Task<PagedResult<IncidentDto>> GetAllAsync(
-    GetIncidentsQuery query)
+    public async Task<PagedResult<IncidentDto>> GetAllAsync(GetIncidentsQuery query)
     {
         var (items, total) = await _repository.GetAllAsync(query);
 
@@ -151,6 +143,16 @@ public class IncidentWorkflowService
             Page = query.Page,
             PageSize = query.PageSize
         };
+    }
+
+    public async Task<IEnumerable<IncidentDto>> GetByDepartmentAsync(
+        int departmentId,
+        string? status = null)
+    {
+        var incidents = await _repository
+            .GetByDepartmentAsync(departmentId, status);
+
+        return incidents.Select(MapToDto);
     }
 
     public async Task<TransitionResult> CompleteChecklistItemAsync(
@@ -194,8 +196,7 @@ public class IncidentWorkflowService
                     : "An incident has been handed off to your department",
                 updated.Status == "ReturnedToOrigin"
                     ? NotificationType.ReturnedToOrigin
-                    : NotificationType.HandedOff
-            );
+                    : NotificationType.HandedOff);
 
             return TransitionResult.Ok(MapToDto(updated));
         }
@@ -225,8 +226,7 @@ public class IncidentWorkflowService
 
         await _notificationService.NotifyAllInvolvedAsync(
             incidentId,
-            "Incident has been closed by the originating department"
-        );
+            "Incident has been closed by the originating department");
 
         return TransitionResult.Ok(MapToDto(updated!));
     }

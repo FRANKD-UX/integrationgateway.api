@@ -1,4 +1,4 @@
-using IntegrationGateway.Api.Infrastructure.Data;
+﻿using IntegrationGateway.Api.Infrastructure.Data;
 using IntegrationGateway.Api.Middleware;
 using IntegrationGateway.Api.Modules.WorkItems;
 using IntegrationGateway.Api.Services;
@@ -27,7 +27,7 @@ builder.Services.AddScoped<WorkItemService>();
 builder.Services.AddScoped<IncidentWorkflowRepository>();
 builder.Services.AddScoped<WorkflowEngine>();
 builder.Services.AddScoped<NotificationService>();
-builder.Services.AddScoped<IncidentWorkflowService>();
+builder.Services.AddScoped<IntegrationGateway.Api.Modules.IncidentWorkflow.IncidentWorkflowService>();
 
 
 // HttpClient for SharePointService with Polly retry policy
@@ -107,3 +107,4 @@ static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
                 // Log the retry attempt
             });
 }
+
