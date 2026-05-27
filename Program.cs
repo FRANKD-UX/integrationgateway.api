@@ -23,7 +23,7 @@ var allowedOrigins = builder.Configuration
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("Angular", policy =>
+    options.AddPolicy("FrontendCors", policy =>
     {
         if (allowedOrigins.Length > 0)
             policy.WithOrigins(allowedOrigins);
@@ -103,7 +103,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
-app.UseCors("Angular");
+app.UseCors("FrontendCors");
 
 // API key middleware - must be before UseAuthorization and MapControllers
 app.UseMiddleware<ApiKeyMiddleware>();
