@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Polly;
 using Polly.Extensions.Http;
 using IntegrationGateway.Api.Modules.IncidentWorkflow;
+using IntegrationGateway.Api.Modules.Dashboard;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,6 +41,10 @@ builder.Services.AddScoped<GraphAuthService>();
 // WorkItems module
 builder.Services.AddScoped<WorkItemRepository>();
 builder.Services.AddScoped<WorkItemService>();
+
+// Dashboard module
+builder.Services.AddScoped<DashboardRepository>();
+builder.Services.AddScoped<DashboardService>();
 
 // IncidentWorkflow module
 builder.Services.AddScoped<IncidentWorkflowRepository>();

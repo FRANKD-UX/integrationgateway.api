@@ -20,7 +20,6 @@ public class IncidentWorkflowRepository
             .Include(i => i.IncidentType)
             .Include(i => i.OriginDepartment)
             .Include(i => i.CurrentDepartment)
-            .Include(i => i.CreatedByUser)
             .Include(i => i.IncidentChainSteps)
                 .ThenInclude(s => s.Department)
             .Include(i => i.IncidentChainSteps)
@@ -34,7 +33,6 @@ public class IncidentWorkflowRepository
             .Include(i => i.IncidentType)
             .Include(i => i.OriginDepartment)
             .Include(i => i.CurrentDepartment)
-            .Include(i => i.CreatedByUser)
             .Where(i => !i.IsDeleted)
             .AsQueryable();
 
@@ -70,7 +68,6 @@ public class IncidentWorkflowRepository
             .Include(i => i.IncidentType)
             .Include(i => i.OriginDepartment)
             .Include(i => i.CurrentDepartment)
-            .Include(i => i.CreatedByUser)
             .Where(i => !i.IsDeleted)
             .Where(i =>
                 i.CurrentDepartmentId == departmentId ||
