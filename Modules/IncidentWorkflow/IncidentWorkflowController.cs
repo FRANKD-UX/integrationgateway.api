@@ -42,10 +42,24 @@ public class IncidentWorkflowController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateIncidentRequest request)
+    public async Task<IActionResult> Create(
+    [FromBody] CreateIncidentRequest request)
     {
-        var created = await _service.CreateAsync(request);
-        return CreatedAtAction(nameof(GetById), new { incidentId = created.IncidentId }, created);
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var created = await _service.CreateAsync(request);
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = created.IncidentId },
+                created);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("{incidentId:int}/checklist/{checklistId:int}/complete")]
