@@ -1,80 +1,85 @@
-give me the updated file using Microsoft.AspNetCore.Mvc;
 using IntegrationGateway.Api.Modules.IncidentWorkflow.Models;
+using Microsoft.AspNetCore.Mvc;
+
 namespace IntegrationGateway.Api.Modules.IncidentWorkflow;
+
 [ApiController]
 [Route("api/incidents")]
 public class IncidentWorkflowController : ControllerBase
 {
     private readonly IncidentWorkflowService _service;
-    public IncidentWorkflowController(IncidentWorkflowService service)
+    private readonly ILogger<IncidentWorkflowController> _logger;
+
+    public IncidentWorkflowController(
+        IncidentWorkflowService service,
+        ILogger<IncidentWorkflowController> logger)
     {
         _service = service;
+        _logger = logger;
     }
+
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] GetIncidentsQuery query)
     {
         var result = await _service.GetAllAsync(query);
         return Ok(result);
     }
+
     [HttpGet("{incidentId:int}")]
     public async Task<IActionResult> GetById(int incidentId)
     {
         var incident = await _service.GetByIdAsync(incidentId);
+
         if (incident is null)
             return NotFound(new { message = $"Incident {incidentId} not found" });
+
         return Ok(incident);
     }
-    [HttpGet("department/{departmentId:int}")]
-    public async Task<IActionResult> GetByDepartment(
-        int departmentId,
-        [FromQuery] string? status = null)
-    {
-        var incidents = await _service.GetByDepartmentAsync(departmentId, status);
-        return Ok(incidents);
-    }
+
     [HttpPost]
     public async Task<IActionResult> Create(
-    [FromBody] CreateIncidentRequest request)
+        [FromBody] CreateIncidentRequest request)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
-        try
-        {
-            var created = await _service.CreateAsync(request);
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = created.IncidentId },
-                created);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+
+        var created = await _service.CreateAsync(request);
+        return CreatedAtAction(
+            nameof(GetById),
+            new { incidentId = created.IncidentId },
+            created);
     }
-    [HttpPost("{incidentId:int}/checklist/{checklistId:int}/complete")]
+
+    [HttpPatch("{id:int}/checklist/{checklistId:int}")]
     public async Task<IActionResult> CompleteChecklistItem(
-        int incidentId,
+        int id,
         int checklistId,
         [FromBody] CompleteChecklistItemRequest request)
     {
-        var result = await _service.CompleteChecklistItemAsync(incidentId, checklistId, request);
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await _service.CompleteChecklistItemAsync(
+            id, checklistId, request);
+
         if (!result.Success)
-            return BadRequest(result);
-        return Ok(result);
+            return BadRequest(new { message = result.ErrorMessage });
+
+        return Ok(result.Incident);
     }
-    [HttpPost("{incidentId:int}/close")]
-    public async Task<IActionResult> CloseIncident(
-        int incidentId,
-        [FromQuery] int requestingUserId,
-        [FromQuery] int requestingDepartmentId)
+
+    [HttpPost("{id:int}/close")]
+    public async Task<IActionResult> Close(
+        int id,
+        [FromQuery] int userId,
+        [FromQuery] int departmentId)
     {
         var result = await _service.CloseIncidentAsync(
-            incidentId,
-            requestingUserId,
-            requestingDepartmentId);
+            id, userId, departmentId);
+
         if (!result.Success)
-            return BadRequest(result);
-        return Ok(result);
+            return BadRequest(new { message = result.ErrorMessage });
+
+        return Ok(result.Incident);
     }
 }
-    
