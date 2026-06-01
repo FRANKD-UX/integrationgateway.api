@@ -20,6 +20,8 @@ namespace IntegrationGateway.Api.Middleware
         public async Task InvokeAsync(HttpContext context, IConfiguration config)
         {
             var path = context.Request.Path.Value?.ToLowerInvariant();
+            var hasBearerToken = context.Request.Headers.Authorization
+                .Any(value => value?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true);
 
             // Only enforce on protected routes
             var isProtected = ProtectedRoutes.Any(r =>
@@ -27,6 +29,19 @@ namespace IntegrationGateway.Api.Middleware
 
             if (isProtected)
             {
+                if (hasBearerToken)
+                {
+                    if (context.User.Identity?.IsAuthenticated == true)
+                    {
+                        await _next(context);
+                        return;
+                    }
+
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    await context.Response.WriteAsync("Invalid bearer token.");
+                    return;
+                }
+
                 // Check header exists
                 if (!context.Request.Headers.TryGetValue(ApiKeyHeader, out var providedKey))
                 {

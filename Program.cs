@@ -7,12 +7,52 @@ using Polly;
 using Polly.Extensions.Http;
 using IntegrationGateway.Api.Modules.IncidentWorkflow;
 using IntegrationGateway.Api.Modules.Dashboard;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Identity.Web;
+using Microsoft.IdentityModel.Tokens;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+var tenantId = builder.Configuration["Graph:TenantId"];
+var clientId = builder.Configuration["Graph:ClientId"];
+
+if (string.IsNullOrWhiteSpace(tenantId))
+    throw new InvalidOperationException("Graph:TenantId is not configured.");
+
+if (string.IsNullOrWhiteSpace(clientId))
+    throw new InvalidOperationException("Graph:ClientId is not configured.");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApi(
+        jwtOptions =>
+        {
+            jwtOptions.Authority = $"https://login.microsoftonline.com/{tenantId}";
+            jwtOptions.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuers =
+                [
+                    $"https://login.microsoftonline.com/{tenantId}/v2.0",
+                    $"https://sts.windows.net/{tenantId}/"
+                ],
+                ValidateAudience = true,
+                ValidAudiences =
+                [
+                    clientId,
+                    $"api://{clientId}"
+                ]
+            };
+        },
+        identityOptions =>
+        {
+            identityOptions.TenantId = tenantId;
+            identityOptions.ClientId = clientId;
+        });
 
 // Swagger / OpenAPI
 builder.Services.AddSwaggerGen();
@@ -108,6 +148,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseCors("FrontendCors");
 
 // API key middleware - must be before UseAuthorization and MapControllers

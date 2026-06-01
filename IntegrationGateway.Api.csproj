@@ -27,6 +27,7 @@
 		<!-- Microsoft Graph + Identity -->
 		<PackageReference Include="Microsoft.Graph" Version="5.104.0" />
 		<PackageReference Include="Microsoft.Identity.Client" Version="4.83.3" />
+		<PackageReference Include="Microsoft.Identity.Web" Version="3.*" />
 	</ItemGroup>
 
 	<ItemGroup>
