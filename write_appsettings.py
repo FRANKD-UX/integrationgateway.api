@@ -20,7 +20,9 @@ config = {
     },
     "SharePoint": {
         "SiteUrl": os.environ.get("SHAREPOINT_SITE_URL", ""),
-        "ListId": os.environ.get("SHAREPOINT_LIST_ID", "")
+        "ListId": os.environ.get("SHAREPOINT_LIST_ID", ""),
+        "SiteId": os.environ.get("SHAREPOINT_SITE_ID", ""),
+        "DriveId": os.environ.get("SHAREPOINT_DRIVE_ID", "")
     },
     "App": {
         "BaseUrl": os.environ.get("APP_BASE_URL", "http://10.200.0.76:8085"),

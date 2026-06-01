@@ -7,6 +7,7 @@ using Polly;
 using Polly.Extensions.Http;
 using IntegrationGateway.Api.Modules.IncidentWorkflow;
 using IntegrationGateway.Api.Modules.Dashboard;
+using IntegrationGateway.Api.Modules.Attachments;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Tokens;
@@ -77,6 +78,8 @@ builder.Services.AddCors(options =>
 
 // Register services
 builder.Services.AddScoped<GraphAuthService>();
+builder.Services.AddHttpClient<AttachmentsService>()
+    .AddPolicyHandler(GetRetryPolicy());
 
 // WorkItems module
 builder.Services.AddScoped<WorkItemRepository>();
