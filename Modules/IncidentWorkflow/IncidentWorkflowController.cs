@@ -68,6 +68,18 @@ public class IncidentWorkflowController : ControllerBase
         return Ok(result.Incident);
     }
 
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var incident = await _service.GetByIdAsync(id);
+
+        if (incident is null)
+            return NotFound(new { message = $"Incident {id} not found" });
+
+        await _service.DeleteAsync(id);
+        return NoContent();
+    }
+
     [HttpPost("{id:int}/close")]
     public async Task<IActionResult> Close(
         int id,

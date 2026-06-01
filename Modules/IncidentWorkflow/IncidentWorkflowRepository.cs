@@ -139,6 +139,18 @@ public class IncidentWorkflowRepository
         await _context.SaveChangesAsync();
     }
 
+    public async Task SoftDeleteAsync(int incidentId)
+    {
+        var incident = await _context.Incidents
+            .FirstOrDefaultAsync(i => i.IncidentId == incidentId);
+
+        if (incident is null) return;
+
+        incident.IsDeleted = true;
+        incident.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+    }
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();

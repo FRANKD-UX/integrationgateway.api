@@ -155,6 +155,19 @@ public class IncidentWorkflowService
         return incidents.Select(MapToDto);
     }
 
+    public async Task DeleteAsync(int incidentId)
+    {
+        await _repository.SoftDeleteAsync(incidentId);
+
+        await _repository.SaveAuditLogAsync(new IncidentAuditLog
+        {
+            IncidentId = incidentId,
+            Action = "Deleted",
+            PerformedAt = DateTime.UtcNow,
+            Notes = "Incident soft deleted"
+        });
+    }
+
     public async Task<TransitionResult> CompleteChecklistItemAsync(
         int incidentId,
         int checklistId,
