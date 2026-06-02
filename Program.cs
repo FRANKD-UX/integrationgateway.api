@@ -1,64 +1,158 @@
-﻿using IntegrationGateway.Api.Infrastructure.Data;
+using IntegrationGateway.Api.Infrastructure.Data;
 using IntegrationGateway.Api.Middleware;
+using IntegrationGateway.Api.Modules.Attachments;
+using IntegrationGateway.Api.Modules.Auth;
+using IntegrationGateway.Api.Modules.Dashboard;
+using IntegrationGateway.Api.Modules.IncidentWorkflow;
 using IntegrationGateway.Api.Modules.WorkItems;
 using IntegrationGateway.Api.Services;
-using Microsoft.EntityFrameworkCore;
-using Polly;
-using Polly.Extensions.Http;
-using IntegrationGateway.Api.Modules.IncidentWorkflow;
-using IntegrationGateway.Api.Modules.Dashboard;
-using IntegrationGateway.Api.Modules.Attachments;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Tokens;
-
+using Polly;
+using Polly.Extensions.Http;
 
 var builder = WebApplication.CreateBuilder(args);
+var developmentAuthEnabled = builder.Configuration.GetValue<bool>("ControlPlane:DevelopmentAuthEnabled");
+
+if (developmentAuthEnabled && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException("ControlPlane:DevelopmentAuthEnabled can only be enabled in Development.");
+}
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-var tenantId = builder.Configuration["Graph:TenantId"];
-var clientId = builder.Configuration["Graph:ClientId"];
+var graphTenantId = builder.Configuration["Graph:TenantId"];
+var graphClientId = builder.Configuration["Graph:ClientId"];
+var azureAdTenantId = builder.Configuration["AzureAd:TenantId"];
+var azureAdClientId = builder.Configuration["AzureAd:ClientId"];
+var azureAdAudience = builder.Configuration["AzureAd:Audience"];
+var azureAdInstance = builder.Configuration["AzureAd:Instance"] ?? "https://login.microsoftonline.com/";
 
-if (string.IsNullOrWhiteSpace(tenantId))
+if (string.IsNullOrWhiteSpace(graphTenantId))
     throw new InvalidOperationException("Graph:TenantId is not configured.");
 
-if (string.IsNullOrWhiteSpace(clientId))
+if (string.IsNullOrWhiteSpace(graphClientId))
     throw new InvalidOperationException("Graph:ClientId is not configured.");
 
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(
-        jwtOptions =>
-        {
-            jwtOptions.Authority = $"https://login.microsoftonline.com/{tenantId}";
-            jwtOptions.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidIssuers =
-                [
-                    $"https://login.microsoftonline.com/{tenantId}/v2.0",
-                    $"https://sts.windows.net/{tenantId}/"
-                ],
-                ValidateAudience = true,
-                ValidAudiences =
-                [
-                    clientId,
-                    $"api://{clientId}"
-                ]
-            };
-        },
-        identityOptions =>
-        {
-            identityOptions.TenantId = tenantId;
-            identityOptions.ClientId = clientId;
-        });
+if (string.IsNullOrWhiteSpace(azureAdTenantId))
+    azureAdTenantId = graphTenantId;
 
-// Swagger / OpenAPI
+if (string.IsNullOrWhiteSpace(azureAdClientId))
+    azureAdClientId = graphClientId;
+
+var validAudiences = new[]
+{
+    azureAdClientId,
+    $"api://{azureAdClientId}",
+    azureAdAudience
+}
+.Where(audience => !string.IsNullOrWhiteSpace(audience))
+.Distinct(StringComparer.OrdinalIgnoreCase)
+.ToArray();
+
+var authBuilder = builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = developmentAuthEnabled
+        ? "GatewayAuthentication"
+        : JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = developmentAuthEnabled
+        ? "GatewayAuthentication"
+        : JwtBearerDefaults.AuthenticationScheme;
+});
+
+authBuilder.AddMicrosoftIdentityWebApi(
+    jwtOptions =>
+    {
+        jwtOptions.Authority = $"{azureAdInstance.TrimEnd('/')}/{azureAdTenantId}/v2.0";
+        jwtOptions.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuers =
+            [
+                $"{azureAdInstance.TrimEnd('/')}/{azureAdTenantId}/v2.0",
+                $"https://sts.windows.net/{azureAdTenantId}/"
+            ],
+            ValidateAudience = true,
+            ValidAudiences = validAudiences
+        };
+        jwtOptions.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("IntegrationGateway.Auth");
+
+                logger.LogInformation(
+                    "Auth provider {AuthProvider} validated token for user {UserObjectId} in tenant {TenantId} from client {ClientId}",
+                    "EntraId",
+                    context.Principal?.FindFirst("oid")?.Value ?? context.Principal?.FindFirst("sub")?.Value,
+                    context.Principal?.FindFirst("tid")?.Value,
+                    context.Principal?.FindFirst("azp")?.Value ?? context.Principal?.FindFirst("appid")?.Value);
+
+                return Task.CompletedTask;
+            }
+        };
+    },
+    identityOptions =>
+    {
+        identityOptions.Instance = azureAdInstance;
+        identityOptions.TenantId = azureAdTenantId;
+        identityOptions.ClientId = azureAdClientId;
+    });
+
+if (developmentAuthEnabled)
+{
+    authBuilder.AddPolicyScheme("GatewayAuthentication", "Gateway authentication", options =>
+    {
+        options.ForwardDefaultSelector = context =>
+        {
+            var hasBearerToken = context.Request.Headers.Authorization.Any(value =>
+                value?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true);
+
+            return hasBearerToken
+                ? JwtBearerDefaults.AuthenticationScheme
+                : DevelopmentAuthenticationHandler.SchemeName;
+        };
+    });
+
+    authBuilder.AddScheme<DevelopmentAuthenticationOptions, DevelopmentAuthenticationHandler>(
+        DevelopmentAuthenticationHandler.SchemeName,
+        _ => { });
+}
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("GatewayAdmin", policy =>
+        policy.RequireAssertion(context => AuthPolicyClaims.HasAnyRole(context.User, "Gateway.Admin", "IncidentOps.Admin")));
+
+    options.AddPolicy("IncidentRead", policy =>
+        policy.RequireAssertion(context =>
+            AuthPolicyClaims.HasAnyScope(context.User, "incidents.read") ||
+            AuthPolicyClaims.HasAnyRole(context.User, "Gateway.Admin", "IncidentOps.Admin")));
+
+    options.AddPolicy("IncidentWrite", policy =>
+        policy.RequireAssertion(context =>
+            AuthPolicyClaims.HasAnyScope(context.User, "incidents.write") ||
+            AuthPolicyClaims.HasAnyRole(context.User, "Gateway.Admin", "IncidentOps.Admin")));
+
+    options.AddPolicy("AttachmentWrite", policy =>
+        policy.RequireAssertion(context =>
+            AuthPolicyClaims.HasAnyScope(context.User, "attachments.write") ||
+            AuthPolicyClaims.HasAnyRole(context.User, "Gateway.Admin", "IncidentOps.Admin")));
+
+    options.AddPolicy("WorkflowTransition", policy =>
+        policy.RequireAssertion(context =>
+            AuthPolicyClaims.HasAnyScope(context.User, "workflow.transition") ||
+            AuthPolicyClaims.HasAnyPermission(context.User, "workflow.transition") ||
+            AuthPolicyClaims.HasAnyRole(context.User, "Gateway.Admin", "IncidentOps.Admin")));
+});
+
 builder.Services.AddSwaggerGen();
 
-// CORS — origins are configured in appsettings under App:AllowedOrigins
 var allowedOrigins = builder.Configuration
     .GetSection("App:AllowedOrigins")
     .Get<string[]>() ?? [];
@@ -76,31 +170,28 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Register services
 builder.Services.AddScoped<GraphAuthService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CurrentUserService>();
+builder.Services.AddScoped<PermissionService>();
+builder.Services.AddScoped<ClientApplicationService>();
 builder.Services.AddHttpClient<AttachmentsService>()
     .AddPolicyHandler(GetRetryPolicy());
 
-// WorkItems module
 builder.Services.AddScoped<WorkItemRepository>();
 builder.Services.AddScoped<WorkItemService>();
 
-// Dashboard module
 builder.Services.AddScoped<DashboardRepository>();
 builder.Services.AddScoped<DashboardService>();
 
-// IncidentWorkflow module
 builder.Services.AddScoped<IncidentWorkflowRepository>();
 builder.Services.AddScoped<WorkflowEngine>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<IntegrationGateway.Api.Modules.IncidentWorkflow.IncidentWorkflowService>();
 
-
-// HttpClient for SharePointService with Polly retry policy
 builder.Services.AddHttpClient<SharePointService>()
     .AddPolicyHandler(GetRetryPolicy());
 
-// Database - SQL Server via EF Core
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -109,19 +200,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             sqlOptions.EnableRetryOnFailure(
                 maxRetryCount: 3,
                 maxRetryDelay: TimeSpan.FromSeconds(10),
-                errorNumbersToAdd: null
-            );
-        }
-    )
-);
+                errorNumbersToAdd: null);
+        }));
 
-// Logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 var app = builder.Build();
 
-// Global exception handler — must come before other middleware
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
@@ -140,21 +226,18 @@ app.UseExceptionHandler(errorApp =>
                     message = error.Error.Message,
                     inner = error.Error.InnerException?.Message,
                     type = error.Error.GetType().Name
-                })
-            );
+                }));
         }
     });
 });
 
-// Swagger UI
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
-app.UseAuthentication();
 app.UseCors("FrontendCors");
+app.UseAuthentication();
 
-// API key middleware - must be before UseAuthorization and MapControllers
 app.UseMiddleware<ApiKeyMiddleware>();
 
 app.UseAuthorization();
@@ -172,7 +255,6 @@ static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
             sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
             onRetry: (outcome, timespan, retryAttempt, context) =>
             {
-                // Log the retry attempt
+                // Retry details are intentionally not logged here to avoid leaking integration payloads.
             });
 }
-

@@ -54,8 +54,28 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<WorkItemCollaborator> WorkItemCollaborators { get; set; }
 
+    public virtual DbSet<ClientApplication> ClientApplications { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ClientApplication>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => e.ClientId, "UX_ClientApplications_ClientId").IsUnique();
+
+            entity.Property(e => e.Name).HasMaxLength(150);
+            entity.Property(e => e.ClientId).HasMaxLength(100);
+            entity.Property(e => e.AppType).HasMaxLength(50);
+            entity.Property(e => e.AuthProvider).HasMaxLength(50);
+            entity.Property(e => e.AllowedOrigins).HasMaxLength(1000);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.UpdatedAt).HasPrecision(0);
+        });
+
         modelBuilder.Entity<Department>(entity =>
         {
             entity.HasIndex(e => new { e.ProjectId, e.DepartmentName }, "UX_Departments_Project_Department").IsUnique();

@@ -20,6 +20,7 @@ namespace IntegrationGateway.Api.Middleware
         public async Task InvokeAsync(HttpContext context, IConfiguration config)
         {
             var path = context.Request.Path.Value?.ToLowerInvariant();
+            var allowApiKeyFallback = config.GetValue("ControlPlane:AllowApiKeyFallback", true);
             var hasBearerToken = context.Request.Headers.Authorization
                 .Any(value => value?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true);
 
@@ -39,6 +40,13 @@ namespace IntegrationGateway.Api.Middleware
 
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                     await context.Response.WriteAsync("Invalid bearer token.");
+                    return;
+                }
+
+                if (!allowApiKeyFallback)
+                {
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    await context.Response.WriteAsync("Bearer token is required.");
                     return;
                 }
 
