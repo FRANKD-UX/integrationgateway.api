@@ -32,12 +32,13 @@ namespace IntegrationGateway.Api.Modules.Attachments
         }
 
         [HttpPost]
+        [Consumes("multipart/form-data")]
         [RequestSizeLimit(MaxMultipartBodyBytes)]
         [RequestFormLimits(MultipartBodyLengthLimit = MaxMultipartBodyBytes)]
         [ProducesResponseType(typeof(AttachmentUploadResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status502BadGateway)]
-        public async Task<IActionResult> Upload(int incidentId, [FromForm] IFormFile? file)
+        public async Task<IActionResult> Upload(int incidentId, IFormFile? file)
         {
             if (file is null || file.Length == 0)
                 return BadRequest(new { message = "Please select a file to upload." });
