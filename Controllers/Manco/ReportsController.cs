@@ -36,7 +36,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateReportRequest request)
+    public async Task<IActionResult> Create([FromBody] CreateReportRequest request)
     {
         try
         {

@@ -27,7 +27,7 @@ public class CommentsController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Manco,Admin")]
-    public async Task<IActionResult> Create(CreateCommentRequest request)
+    public async Task<IActionResult> Create([FromBody] CreateCommentRequest request)
     {
         try
         {

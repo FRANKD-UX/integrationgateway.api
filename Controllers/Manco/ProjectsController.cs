@@ -23,7 +23,7 @@ public class ProjectsController : ControllerBase
     public async Task<IActionResult> GetSummary() => Ok(await _service.GetSummaryAsync());
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateProjectRequest request)
+    public async Task<IActionResult> Create([FromBody] CreateProjectRequest request)
     {
         try
         {
@@ -50,7 +50,7 @@ public class ProjectsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/status")]
-    public async Task<IActionResult> UpdateStatus(Guid id, UpdateProjectStatusRequest request)
+    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateProjectStatusRequest request)
     {
         try
         {
@@ -67,7 +67,7 @@ public class ProjectsController : ControllerBase
     public async Task<IActionResult> GetTasks(Guid id) => Ok(await _service.GetTasksAsync(id));
 
     [HttpPost("{id:guid}/tasks")]
-    public async Task<IActionResult> CreateTask(Guid id, CreateTaskRequest request)
+    public async Task<IActionResult> CreateTask(Guid id, [FromBody] CreateTaskRequest request)
     {
         try
         {
@@ -81,7 +81,7 @@ public class ProjectsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/tasks/{taskId:guid}/status")]
-    public async Task<IActionResult> UpdateTaskStatus(Guid id, Guid taskId, UpdateTaskStatusRequest request)
+    public async Task<IActionResult> UpdateTaskStatus(Guid id, Guid taskId, [FromBody] UpdateTaskStatusRequest request)
     {
         try
         {
@@ -98,7 +98,7 @@ public class ProjectsController : ControllerBase
     public async Task<IActionResult> GetBacklogReasons(Guid id) => Ok(await _service.GetBacklogReasonsAsync(id));
 
     [HttpPost("{id:guid}/backlog-reasons")]
-    public async Task<IActionResult> AddBacklogReason(Guid id, AddBacklogReasonRequest request)
+    public async Task<IActionResult> AddBacklogReason(Guid id, [FromBody] AddBacklogReasonRequest request)
     {
         try
         {
@@ -116,7 +116,7 @@ public class ProjectsController : ControllerBase
 
     [HttpPost("{id:guid}/priority")]
     [Authorize(Roles = "Manco,Admin")]
-    public async Task<IActionResult> SetPriority(Guid id, SetPriorityRequest request)
+    public async Task<IActionResult> SetPriority(Guid id, [FromBody] SetPriorityRequest request)
     {
         try
         {

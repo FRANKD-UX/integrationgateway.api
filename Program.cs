@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Polly;
 using Polly.Extensions.Http;
 
@@ -154,7 +155,12 @@ builder.Services.AddAuthorization(options =>
             AuthPolicyClaims.HasAnyRole(context.User, "Gateway.Admin", "IncidentOps.Admin")));
 });
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
+    options.MapType<DateOnly>(() => new OpenApiSchema { Type = "string", Format = "date" });
+    options.MapType<DateOnly?>(() => new OpenApiSchema { Type = "string", Format = "date", Nullable = true });
+});
 
 var allowedOrigins = builder.Configuration
     .GetSection("App:AllowedOrigins")
