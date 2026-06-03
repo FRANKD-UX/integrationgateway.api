@@ -1,0 +1,356 @@
+{
+  "info": {
+    "_postman_id": "5243c571-28c2-47b5-b7f0-8a9b02301c4a",
+    "name": "Manco Reporting API",
+    "description": "Ordered validation collection for the Manco Reporting module. Run 00 - Auth Baseline first, then folders in sequence.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const token = pm.environment.get('access_token');",
+          "const expiresAt = Number(pm.environment.get('token_expires_at') || 0);",
+          "const now = Date.now();",
+          "",
+          "if (token && expiresAt - now > 60000) {",
+          "  return;",
+          "}",
+          "",
+          "const tenantId = pm.environment.get('tenant_id');",
+          "const clientId = pm.environment.get('client_id');",
+          "const clientSecret = pm.environment.get('client_secret');",
+          "const scope = pm.environment.get('token_scope');",
+          "",
+          "if (!tenantId || !clientId || !clientSecret || !scope) {",
+          "  console.warn('No usable token refresh settings found. Set access_token manually or fill tenant_id, client_id, client_secret, token_scope.');",
+          "  return;",
+          "}",
+          "",
+          "pm.sendRequest({",
+          "  url: `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,",
+          "  method: 'POST',",
+          "  header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
+          "  body: {",
+          "    mode: 'urlencoded',",
+          "    urlencoded: [",
+          "      { key: 'grant_type', value: 'client_credentials' },",
+          "      { key: 'client_id', value: clientId },",
+          "      { key: 'client_secret', value: clientSecret },",
+          "      { key: 'scope', value: scope }",
+          "    ]",
+          "  }",
+          "}, function (err, res) {",
+          "  if (err) { throw err; }",
+          "  const json = res.json();",
+          "  pm.environment.set('access_token', json.access_token);",
+          "  pm.environment.set('token_expires_at', String(Date.now() + (json.expires_in * 1000)));",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Auth Baseline",
+      "item": [
+        {
+          "name": "Valid token, known active user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/manco/projects"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('200 resolver finds active user', () => pm.response.to.have.status(200));" ] }
+            }
+          ]
+        },
+        {
+          "name": "Valid token, unknown user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/manco/projects"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('404 provisioning boundary enforced', () => pm.response.to.have.status(404));", "pm.test('NotFound message present', () => pm.expect(pm.response.json().message).to.include('Manco user'));" ] }
+            }
+          ]
+        },
+        {
+          "name": "Valid token, inactive user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/manco/projects"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('400 inactive user rejected', () => pm.response.to.have.status(400));", "pm.test('Inactive message present', () => pm.expect(pm.response.json().message).to.include('inactive'));" ] }
+            }
+          ]
+        },
+        {
+          "name": "No token",
+          "auth": { "type": "noauth" },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/manco/projects"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('401 without token', () => pm.response.to.have.status(401));" ] }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Projects",
+      "item": [
+        {
+          "name": "Core CRUD - Create Project",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Postman Validation Project\",\n  \"description\": \"Created by Manco validation collection\",\n  \"startDate\": \"2026-06-03\",\n  \"targetDate\": \"2026-07-03\",\n  \"ownerId\": \"{{owner_id}}\"\n}"
+            },
+            "url": "{{base_url}}/api/manco/projects"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('201 created', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "pm.expect(json.projectId).to.exist;", "pm.collectionVariables.set('projectId', json.projectId);", "pm.environment.set('projectId', json.projectId);" ] }
+            }
+          ]
+        },
+        {
+          "name": "Core CRUD - Get Summary",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/manco/projects" },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('200 summary', () => pm.response.to.have.status(200));", "const projectId = pm.collectionVariables.get('projectId') || pm.environment.get('projectId');", "const project = pm.response.json().find(p => p.projectId === projectId);", "pm.test('contains new project', () => pm.expect(project).to.exist);", "pm.test('no reports/tasks yet', () => { pm.expect(project.latestReportStatus).to.eql(null); pm.expect(project.openTaskCount).to.eql(0); pm.expect(project.totalTaskCount).to.eql(0); });" ] }
+            }
+          ]
+        },
+        {
+          "name": "Core CRUD - Get Project By Id",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/manco/projects/{{projectId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('200 project', () => pm.response.to.have.status(200));", "const json = pm.response.json();", "pm.test('Draft and Unset defaults', () => { pm.expect(json.status).to.eql('Draft'); pm.expect(json.currentPriority).to.eql('Unset'); });" ] }
+            }
+          ]
+        },
+        {
+          "name": "Status Transitions - Draft to Active",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"status\": \"Active\" }" },
+            "url": "{{base_url}}/api/manco/projects/{{projectId}}/status"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('204 active transition', () => pm.response.to.have.status(204));" ] } }]
+        },
+        {
+          "name": "Status Transitions - Invalid Status Rejected",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"status\": \"InvalidStatus\" }" },
+            "url": "{{base_url}}/api/manco/projects/{{projectId}}/status"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('400 invalid project status', () => pm.response.to.have.status(400));" ] } }]
+        },
+        {
+          "name": "Priority - Unset Rejected",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"priorityLevel\": \"Unset\", \"justification\": \"test\" }" },
+            "url": "{{base_url}}/api/manco/projects/{{projectId}}/priority"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('400 Unset rejected', () => pm.response.to.have.status(400));" ] } }]
+        },
+        {
+          "name": "Priority - High",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"priorityLevel\": \"High\", \"justification\": \"First decision\" }" },
+            "url": "{{base_url}}/api/manco/projects/{{projectId}}/priority"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('201 priority decision', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('decisionId', pm.response.json().decisionId);" ] } }]
+        },
+        {
+          "name": "Priority - Critical",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"priorityLevel\": \"Critical\", \"justification\": \"Escalated\" }" },
+            "url": "{{base_url}}/api/manco/projects/{{projectId}}/priority"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('201 second priority decision', () => pm.response.to.have.status(201));" ] } }]
+        },
+        {
+          "name": "Priority - History",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/manco/projects/{{projectId}}/priority-history" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 priority history', () => pm.response.to.have.status(200));", "const rows = pm.response.json();", "pm.test('two decisions', () => pm.expect(rows.length).to.be.at.least(2));", "pm.test('descending latest Critical', () => pm.expect(rows[0].priorityLevel).to.eql('Critical'));" ] } }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Tasks",
+      "item": [
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"title\": \"Validation task\",\n  \"description\": \"Task created by Postman collection\",\n  \"priority\": \"High\",\n  \"dueDate\": \"2026-06-30\",\n  \"assignedTo\": \"{{assigned_to}}\"\n}" },
+            "url": "{{base_url}}/api/manco/projects/{{projectId}}/tasks"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('201 task created', () => pm.response.to.have.status(201));", "pm.environment.set('taskId', pm.response.json().taskId);" ] } }]
+        },
+        {
+          "name": "Task Status - InProgress",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"InProgress\" }" }, "url": "{{base_url}}/api/manco/projects/{{projectId}}/tasks/{{taskId}}/status" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('204 in progress', () => pm.response.to.have.status(204));" ] } }]
+        },
+        {
+          "name": "Task Status - Done",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"Done\" }" }, "url": "{{base_url}}/api/manco/projects/{{projectId}}/tasks/{{taskId}}/status" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('204 done', () => pm.response.to.have.status(204));" ] } }]
+        },
+        {
+          "name": "Get Tasks - CompletedAt Set",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/manco/projects/{{projectId}}/tasks" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 tasks', () => pm.response.to.have.status(200));", "const task = pm.response.json().find(t => t.taskId === pm.environment.get('taskId'));", "pm.test('Done with completedAt', () => { pm.expect(task.status).to.eql('Done'); pm.expect(task.completedAt).to.not.eql(null); });", "pm.environment.set('completedAt', task.completedAt);" ] } }]
+        },
+        {
+          "name": "Task Status - Done Idempotent",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"Done\" }" }, "url": "{{base_url}}/api/manco/projects/{{projectId}}/tasks/{{taskId}}/status" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('204 second done', () => pm.response.to.have.status(204));" ] } }]
+        }
+      ]
+    },
+    {
+      "name": "03 - Backlog Reasons",
+      "item": [
+        {
+          "name": "Add Backlog Reason",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"reasonText\": \"Deferred pending steering committee decision.\" }" }, "url": "{{base_url}}/api/manco/projects/{{projectId}}/backlog-reasons" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('201 backlog reason', () => pm.response.to.have.status(201));" ] } }]
+        },
+        {
+          "name": "Get Backlog Reasons",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/manco/projects/{{projectId}}/backlog-reasons" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 backlog reasons', () => pm.response.to.have.status(200));", "pm.test('at least one reason', () => pm.expect(pm.response.json().length).to.be.at.least(1));" ] } }]
+        }
+      ]
+    },
+    {
+      "name": "04 - Reports",
+      "item": [
+        {
+          "name": "State Machine - Create Draft",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"weekNumber\": 22,\n  \"year\": 2026,\n  \"summary\": \"Weekly validation summary\",\n  \"achievements\": \"Project validation started\",\n  \"blockers\": null,\n  \"plannedNextWeek\": \"Continue validation\"\n}" }, "url": "{{base_url}}/api/manco/reports" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('201 report draft', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "pm.environment.set('reportId', json.reportId);", "pm.test('Draft status', () => pm.expect(json.reportStatus).to.eql('Draft'));" ] } }]
+        },
+        {
+          "name": "State Machine - Duplicate Rejected",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"weekNumber\": 22,\n  \"year\": 2026,\n  \"summary\": \"Duplicate weekly validation summary\"\n}" }, "url": "{{base_url}}/api/manco/reports" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('409 duplicate report', () => pm.response.to.have.status(409));" ] } }]
+        },
+        {
+          "name": "State Machine - Draft Review Rejected",
+          "request": { "method": "POST", "header": [], "url": "{{base_url}}/api/manco/reports/{{reportId}}/review" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('400 cannot review draft', () => pm.response.to.have.status(400));" ] } }]
+        },
+        {
+          "name": "State Machine - Submit",
+          "request": { "method": "POST", "header": [], "url": "{{base_url}}/api/manco/reports/{{reportId}}/submit" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('204 submit', () => pm.response.to.have.status(204));" ] } }]
+        },
+        {
+          "name": "State Machine - Resubmit Rejected",
+          "request": { "method": "POST", "header": [], "url": "{{base_url}}/api/manco/reports/{{reportId}}/submit" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('400 cannot resubmit', () => pm.response.to.have.status(400));" ] } }]
+        },
+        {
+          "name": "State Machine - Review",
+          "request": { "method": "POST", "header": [], "url": "{{base_url}}/api/manco/reports/{{reportId}}/review" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('204 review', () => pm.response.to.have.status(204));" ] } }]
+        },
+        {
+          "name": "State Machine - Action",
+          "request": { "method": "POST", "header": [], "url": "{{base_url}}/api/manco/reports/{{reportId}}/action" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('204 action', () => pm.response.to.have.status(204));" ] } }]
+        },
+        {
+          "name": "State Machine - Get Detail",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/manco/reports/{{reportId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 report detail', () => pm.response.to.have.status(200));", "const json = pm.response.json();", "pm.test('Actioned with review metadata', () => { pm.expect(json.reportStatus).to.eql('Actioned'); pm.expect(json.reviewedBy).to.not.eql(null); pm.expect(json.reviewedAt).to.not.eql(null); });" ] } }]
+        }
+      ]
+    },
+    {
+      "name": "05 - Comments",
+      "item": [
+        {
+          "name": "Create Report Comment",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"reportId\": \"{{reportId}}\",\n  \"projectId\": null,\n  \"commentText\": \"Validation comment\",\n  \"commentType\": \"General\"\n}" }, "url": "{{base_url}}/api/manco/comments" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('201 comment', () => pm.response.to.have.status(201));", "pm.environment.set('commentId', pm.response.json().commentId);" ] } }]
+        },
+        {
+          "name": "XOR - Both Report And Project Rejected",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"reportId\": \"{{reportId}}\",\n  \"projectId\": \"{{projectId}}\",\n  \"commentText\": \"Invalid both\"\n}" }, "url": "{{base_url}}/api/manco/comments" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('400 XOR both rejected', () => pm.response.to.have.status(400));" ] } }]
+        },
+        {
+          "name": "XOR - Neither Report Nor Project Rejected",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"reportId\": null,\n  \"projectId\": null,\n  \"commentText\": \"Invalid neither\"\n}" }, "url": "{{base_url}}/api/manco/comments" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('400 XOR neither rejected', () => pm.response.to.have.status(400));" ] } }]
+        },
+        {
+          "name": "Resolve Comment",
+          "request": { "method": "POST", "header": [], "url": "{{base_url}}/api/manco/comments/{{commentId}}/resolve" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('204 resolve', () => pm.response.to.have.status(204));" ] } }]
+        },
+        {
+          "name": "Get Report Comments",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/manco/comments/report/{{reportId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 report comments', () => pm.response.to.have.status(200));", "const comment = pm.response.json().find(c => c.commentId === pm.environment.get('commentId'));", "pm.test('resolved comment visible', () => { pm.expect(comment).to.exist; pm.expect(comment.isResolved).to.eql(true); pm.expect(comment.resolvedAt).to.not.eql(null); });" ] } }]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "projectId", "value": "" },
+    { "key": "decisionId", "value": "" }
+  ]
+}

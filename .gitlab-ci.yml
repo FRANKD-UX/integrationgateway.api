@@ -58,19 +58,84 @@ publish:
 
 deploy-iis:
   stage: deploy
-  script:
-    - echo "Starting IIS deployment"
-    - apt-get update -qq && apt-get install -y -qq python3
-    - echo "Writing appsettings.json from CI variables"
-    - python3 write_appsettings.py
-    - echo "Verifying appsettings.json"
-    - cat publish/appsettings.json
-    - echo "Deploy path is $DEPLOY_PATH"
-    - rm -rf "$DEPLOY_PATH"/*
-    - cp -r publish/* "$DEPLOY_PATH"/
-    - echo "Deployment files copied successfully"
-    - ls -la "$DEPLOY_PATH"
   dependencies:
     - publish
   environment:
     name: staging
+  script:
+    - echo "Starting IIS deployment"
+
+    - apt-get update -qq && apt-get install -y -qq python3
+
+    - echo "Checking required CI/CD variables"
+    - |
+      python3 - <<'PY'
+      import os
+      import sys
+
+      required = [
+          "DEPLOY_PATH",
+          "DB_CONNECTION_STRING",
+          "GRAPH_TENANT_ID",
+          "GRAPH_CLIENT_ID",
+          "GRAPH_CLIENT_SECRET"
+      ]
+
+      missing = [
+          name for name in required
+          if not os.environ.get(name, "").strip()
+      ]
+
+      if missing:
+          print("Missing required CI/CD variables:")
+          for name in missing:
+              print(f" - {name}")
+          sys.exit(1)
+
+      print("Required CI/CD variables are present.")
+      PY
+
+    - echo "Writing appsettings.json from CI variables"
+    - python3 write_appsettings.py
+
+    - echo "Verifying generated appsettings.json without printing secrets"
+    - |
+      python3 - <<'PY'
+      import json
+      import sys
+
+      with open("publish/appsettings.json", "r", encoding="utf-8") as f:
+          config = json.load(f)
+
+      checks = {
+          "ConnectionStrings:DefaultConnection": bool(config.get("ConnectionStrings", {}).get("DefaultConnection")),
+          "ConnectionStrings:MancoReportingConnection": bool(config.get("ConnectionStrings", {}).get("MancoReportingConnection")),
+          "Graph:TenantId": bool(config.get("Graph", {}).get("TenantId")),
+          "Graph:ClientId": bool(config.get("Graph", {}).get("ClientId")),
+          "Graph:ClientSecret": bool(config.get("Graph", {}).get("ClientSecret")),
+      }
+
+      failed = False
+
+      for key, is_set in checks.items():
+          print(f"{key} set: {is_set}")
+          if not is_set:
+              failed = True
+
+      if failed:
+          print("Generated appsettings.json is missing required values.")
+          sys.exit(1)
+
+      print("Generated appsettings.json passed required config checks.")
+      PY
+
+    - echo "Deploy path is $DEPLOY_PATH"
+
+    - echo "Cleaning deploy path"
+    - rm -rf "$DEPLOY_PATH"/*
+
+    - echo "Copying published files"
+    - cp -r publish/* "$DEPLOY_PATH"/
+
+    - echo "Deployment files copied successfully"
+    - ls -la "$DEPLOY_PATH"
