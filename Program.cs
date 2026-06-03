@@ -1,5 +1,8 @@
 using IntegrationGateway.Api.Infrastructure.Data;
 using IntegrationGateway.Api.Middleware;
+using IntegrationGateway.Api.Modules.MancoReporting.Data;
+using IntegrationGateway.Api.Modules.MancoReporting.Repositories;
+using IntegrationGateway.Api.Modules.MancoReporting.Services;
 using IntegrationGateway.Api.Modules.Attachments;
 using IntegrationGateway.Api.Modules.Auth;
 using IntegrationGateway.Api.Modules.Dashboard;
@@ -202,6 +205,25 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                 maxRetryDelay: TimeSpan.FromSeconds(10),
                 errorNumbersToAdd: null);
         }));
+
+builder.Services.AddDbContext<MancoDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("MancoReportingConnection"),
+        sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null);
+        }));
+
+builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
+builder.Services.AddScoped<IMancoUserResolver, MancoUserResolver>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<IReportRepository, ReportRepository>();
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+builder.Services.AddScoped<ICommentService, CommentService>();
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
