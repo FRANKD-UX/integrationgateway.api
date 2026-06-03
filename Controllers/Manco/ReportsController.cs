@@ -66,7 +66,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/review")]
-    [Authorize(Roles = "Manco,Admin")]
+    [Authorize(Policy = "MancoReviewer")]
     public async Task<IActionResult> Review(Guid id)
     {
         try
@@ -82,7 +82,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/action")]
-    [Authorize(Roles = "Manco,Admin")]
+    [Authorize(Policy = "MancoReviewer")]
     public async Task<IActionResult> Action(Guid id)
     {
         try

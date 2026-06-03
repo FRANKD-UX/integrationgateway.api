@@ -1,5 +1,6 @@
 using IntegrationGateway.Api.Infrastructure.Data;
 using IntegrationGateway.Api.Middleware;
+using IntegrationGateway.Api.Modules.MancoReporting.Auth;
 using IntegrationGateway.Api.Modules.MancoReporting.Data;
 using IntegrationGateway.Api.Modules.MancoReporting.Repositories;
 using IntegrationGateway.Api.Modules.MancoReporting.Services;
@@ -10,6 +11,7 @@ using IntegrationGateway.Api.Modules.IncidentWorkflow;
 using IntegrationGateway.Api.Modules.WorkItems;
 using IntegrationGateway.Api.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
@@ -156,6 +158,9 @@ builder.Services.AddAuthorization(options =>
             AuthPolicyClaims.HasAnyScope(context.User, "workflow.transition") ||
             AuthPolicyClaims.HasAnyPermission(context.User, "workflow.transition") ||
             AuthPolicyClaims.HasAnyRole(context.User, "Gateway.Admin", "IncidentOps.Admin")));
+
+    options.AddPolicy("MancoReviewer", policy =>
+        policy.Requirements.Add(new MancoRoleRequirement("Manco", "Admin")));
 });
 
 builder.Services.AddSwaggerGen(options =>
@@ -233,6 +238,7 @@ builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IAuthorizationHandler, MancoRoleAuthorizationHandler>();
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();

@@ -119,7 +119,7 @@ public class ProjectsController : ControllerBase
     public async Task<IActionResult> GetPriorityHistory(Guid id) => Ok(await _service.GetPriorityHistoryAsync(id));
 
     [HttpPost("{id:guid}/priority")]
-    [Authorize(Roles = "Manco,Admin")]
+    [Authorize(Policy = "MancoReviewer")]
     public async Task<IActionResult> SetPriority(Guid id, [FromBody] SetPriorityRequest request)
     {
         try

@@ -26,7 +26,7 @@ public class CommentsController : ControllerBase
     public async Task<IActionResult> GetByProject(Guid projectId) => Ok(await _service.GetByProjectAsync(projectId));
 
     [HttpPost]
-    [Authorize(Roles = "Manco,Admin")]
+    [Authorize(Policy = "MancoReviewer")]
     public async Task<IActionResult> Create([FromBody] CreateCommentRequest request)
     {
         try
@@ -47,7 +47,7 @@ public class CommentsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/resolve")]
-    [Authorize(Roles = "Manco,Admin")]
+    [Authorize(Policy = "MancoReviewer")]
     public async Task<IActionResult> Resolve(Guid id)
     {
         try
