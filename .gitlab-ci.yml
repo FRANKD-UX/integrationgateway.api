@@ -76,6 +76,7 @@ deploy-iis:
       required = [
           "DEPLOY_PATH",
           "DB_CONNECTION_STRING",
+          "MANCO_REPORTING_CONNECTION",
           "GRAPH_TENANT_ID",
           "GRAPH_CLIENT_ID",
           "GRAPH_CLIENT_SECRET"

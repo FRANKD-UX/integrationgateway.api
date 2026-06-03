@@ -27,14 +27,10 @@ if not publish_dir.exists():
 
 
 db_connection_string = require_env("DB_CONNECTION_STRING")
+manco_reporting_connection = require_env("MANCO_REPORTING_CONNECTION")
 graph_tenant_id = require_env("GRAPH_TENANT_ID")
 graph_client_id = require_env("GRAPH_CLIENT_ID")
 graph_client_secret = require_env("GRAPH_CLIENT_SECRET")
-
-manco_reporting_connection = optional_env(
-    "MANCO_REPORTING_CONNECTION",
-    db_connection_string
-)
 
 allowed_origins_raw = optional_env("ALLOWED_ORIGINS")
 
