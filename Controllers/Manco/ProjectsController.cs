@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using IntegrationGateway.Api.Modules.MancoReporting.Auth;
 using IntegrationGateway.Api.Modules.MancoReporting.DTOs.Requests;
 using IntegrationGateway.Api.Modules.MancoReporting.Exceptions;
 using IntegrationGateway.Api.Modules.MancoReporting.Services;
@@ -27,7 +27,8 @@ public class ProjectsController : ControllerBase
     {
         try
         {
-            var created = await _service.CreateAsync(request, GetCallerOid());
+            var azureAdObjectId = User.GetAzureAdObjectId();
+            var created = await _service.CreateAsync(request, azureAdObjectId);
             return CreatedAtAction(nameof(GetById), new { id = created.ProjectId }, created);
         }
         catch (Exception ex) when (TryMapException(ex, out var result))
@@ -54,7 +55,8 @@ public class ProjectsController : ControllerBase
     {
         try
         {
-            await _service.UpdateStatusAsync(id, request, GetCallerOid());
+            var azureAdObjectId = User.GetAzureAdObjectId();
+            await _service.UpdateStatusAsync(id, request, azureAdObjectId);
             return NoContent();
         }
         catch (Exception ex) when (TryMapException(ex, out var result))
@@ -71,7 +73,8 @@ public class ProjectsController : ControllerBase
     {
         try
         {
-            var created = await _service.CreateTaskAsync(id, request, GetCallerOid());
+            var azureAdObjectId = User.GetAzureAdObjectId();
+            var created = await _service.CreateTaskAsync(id, request, azureAdObjectId);
             return CreatedAtAction(nameof(GetTasks), new { id }, created);
         }
         catch (Exception ex) when (TryMapException(ex, out var result))
@@ -102,7 +105,8 @@ public class ProjectsController : ControllerBase
     {
         try
         {
-            var created = await _service.AddBacklogReasonAsync(id, request, GetCallerOid());
+            var azureAdObjectId = User.GetAzureAdObjectId();
+            var created = await _service.AddBacklogReasonAsync(id, request, azureAdObjectId);
             return CreatedAtAction(nameof(GetBacklogReasons), new { id }, created);
         }
         catch (Exception ex) when (TryMapException(ex, out var result))
@@ -120,7 +124,8 @@ public class ProjectsController : ControllerBase
     {
         try
         {
-            var created = await _service.SetPriorityAsync(id, request, GetCallerOid());
+            var azureAdObjectId = User.GetAzureAdObjectId();
+            var created = await _service.SetPriorityAsync(id, request, azureAdObjectId);
             return CreatedAtAction(nameof(GetPriorityHistory), new { id }, created);
         }
         catch (Exception ex) when (TryMapException(ex, out var result))
@@ -129,13 +134,11 @@ public class ProjectsController : ControllerBase
         }
     }
 
-    private string GetCallerOid() =>
-        User.FindFirstValue("oid") ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-
     private bool TryMapException(Exception ex, out IActionResult result)
     {
         result = ex switch
         {
+            UnauthorizedAccessException => Unauthorized(new { message = ex.Message }),
             NotFoundException => NotFound(new { message = ex.Message }),
             ConflictException => Conflict(new { message = ex.Message }),
             Modules.MancoReporting.Exceptions.ValidationException => BadRequest(new { message = ex.Message }),

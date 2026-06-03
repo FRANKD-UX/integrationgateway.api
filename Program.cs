@@ -71,6 +71,7 @@ var authBuilder = builder.Services.AddAuthentication(options =>
 authBuilder.AddMicrosoftIdentityWebApi(
     jwtOptions =>
     {
+        jwtOptions.MapInboundClaims = false;
         jwtOptions.Authority = $"{azureAdInstance.TrimEnd('/')}/{azureAdTenantId}/v2.0";
         jwtOptions.TokenValidationParameters = new TokenValidationParameters
         {
@@ -87,13 +88,15 @@ authBuilder.AddMicrosoftIdentityWebApi(
         {
             OnTokenValidated = context =>
             {
+                const string objectIdentifierClaimType = "http://schemas.microsoft.com/identity/claims/objectidentifier";
+
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
                     .CreateLogger("IntegrationGateway.Auth");
 
                 logger.LogInformation(
                     "Auth provider {AuthProvider} validated token for user {UserObjectId} in tenant {TenantId} from client {ClientId}",
                     "EntraId",
-                    context.Principal?.FindFirst("oid")?.Value ?? context.Principal?.FindFirst("sub")?.Value,
+                    context.Principal?.FindFirst("oid")?.Value ?? context.Principal?.FindFirst(objectIdentifierClaimType)?.Value,
                     context.Principal?.FindFirst("tid")?.Value,
                     context.Principal?.FindFirst("azp")?.Value ?? context.Principal?.FindFirst("appid")?.Value);
 

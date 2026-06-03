@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using IntegrationGateway.Api.Modules.MancoReporting.Auth;
 using IntegrationGateway.Api.Modules.MancoReporting.DTOs.Requests;
 using IntegrationGateway.Api.Modules.MancoReporting.Exceptions;
 using IntegrationGateway.Api.Modules.MancoReporting.Services;
@@ -40,7 +40,8 @@ public class ReportsController : ControllerBase
     {
         try
         {
-            var created = await _service.CreateAsync(request, GetCallerOid());
+            var azureAdObjectId = User.GetAzureAdObjectId();
+            var created = await _service.CreateAsync(request, azureAdObjectId);
             return CreatedAtAction(nameof(GetDetail), new { id = created.ReportId }, created);
         }
         catch (Exception ex) when (TryMapException(ex, out var result))
@@ -54,7 +55,8 @@ public class ReportsController : ControllerBase
     {
         try
         {
-            await _service.SubmitAsync(id, GetCallerOid());
+            var azureAdObjectId = User.GetAzureAdObjectId();
+            await _service.SubmitAsync(id, azureAdObjectId);
             return NoContent();
         }
         catch (Exception ex) when (TryMapException(ex, out var result))
@@ -69,7 +71,8 @@ public class ReportsController : ControllerBase
     {
         try
         {
-            await _service.ReviewAsync(id, GetCallerOid());
+            var azureAdObjectId = User.GetAzureAdObjectId();
+            await _service.ReviewAsync(id, azureAdObjectId);
             return NoContent();
         }
         catch (Exception ex) when (TryMapException(ex, out var result))
@@ -93,13 +96,11 @@ public class ReportsController : ControllerBase
         }
     }
 
-    private string GetCallerOid() =>
-        User.FindFirstValue("oid") ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-
     private bool TryMapException(Exception ex, out IActionResult result)
     {
         result = ex switch
         {
+            UnauthorizedAccessException => Unauthorized(new { message = ex.Message }),
             NotFoundException => NotFound(new { message = ex.Message }),
             ConflictException => Conflict(new { message = ex.Message }),
             Modules.MancoReporting.Exceptions.ValidationException => BadRequest(new { message = ex.Message }),
