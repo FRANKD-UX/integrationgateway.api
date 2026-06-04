@@ -233,6 +233,7 @@ builder.Services.AddDbContext<MancoDbContext>(options =>
 
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<IMancoUserResolver, MancoUserResolver>();
+builder.Services.AddScoped<IMancoCurrentUserService, MancoCurrentUserService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportService, ReportService>();
